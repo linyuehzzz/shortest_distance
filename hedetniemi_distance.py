@@ -9,34 +9,38 @@ from timeit import default_timer
 ##******** Generate graph data ********##
 
 ## Number of nodes (100/1,000/10,000/100,000/1,000,000)
-nodes = 1000
+nodes = [100, 1000, 10000, 100000, 1000000]
 print('Nodes: ', nodes)
 ## Total degree
-degree = 3
+degree = [3, 4, 5]
 print('Degree: ', degree)
 
-G = nx.random_regular_graph(degree,nodes)
-for (u, v) in G.edges():
-    G.edges[u,v]['weight'] = random.uniform(1,100)
-nx.draw(G)
-nx.write_weighted_edgelist(G, 'graph_n' + str(nodes) + '_d' + str(degree) + '.txt')
+for i in nodes:
+    for j in degree:
+        G = nx.random_regular_graph(j, i)
+        for (u, v) in G.edges():
+            G.edges[u,v]['weight'] = random.uniform(1,100)
+        nx.draw(G)
+        nx.write_weighted_edgelist(G, 'graph_n' + str(i) + '_d' + str(j) + '.txt')
 
-data = []
-with open('graph_n' + str(nodes) + '_d' + str(degree) + '.txt', 'r') as f:
-  lines = f.read().splitlines()
-  for line in lines:
-    l = line.split()
-    item = [int(l[0]), int(l[1]), float(l[2])]
-    data.append(item)
+for i in nodes:
+    for j in degree:        
+        locals()['data_n' + str(i) + '_d' + str(j)] = []
+        with open('graph_n' + str(i) + '_d' + str(j) + '.txt', 'r') as f:
+            lines = f.read().splitlines()
+            for line in lines:
+                l = line.split()
+                item = [int(l[0]), int(l[1]), float(l[2])]
+                locals()['data_n' + str(i) + '_d' + str(j)].append(item)
 
-print(data[0])
+        print(locals()['data_n' + str(i) + '_d' + str(j)][0])
 
 
 
 ##******** Implementation 1: list ********##
 ##**** Construct distance matrix ****##
 
-def distance_matrix(graph):
+def distance_matrix_list(graph):
   ## calculate number of nodes
   n = max([g[1] for g in graph])
 
@@ -57,16 +61,10 @@ def distance_matrix(graph):
   return dist_mtx, n
 
 
-## print time costs
-start = default_timer()
-dist_mtx, n = distance_matrix(data)
-stop = default_timer()
-print('List t1: ', stop - start)
-
 
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
-def hede_distance(matrix, n):
+def hede_distance_list(matrix, n):
   INF = float('inf')
   mtx_a_t = [[INF] * n for i in range(n)]
   mtx_a_t_1 = matrix
@@ -87,18 +85,11 @@ def hede_distance(matrix, n):
   return mtx_a_t
 
 
-## print time costs
-start = default_timer()
-mtx_a_t = hede_distance(dist_mtx, n)
-stop = default_timer()
-print('List t2: ', stop - start)
-
-
 
 ##******** Implementation 2: numpy ********##
 ##**** Construct distance matrix ****##
 
-def distance_matrix(graph):
+def distance_matrix_np(graph):
   ## calculate number of nodes
   n = int(np.amax(graph[:,1]))
 
@@ -117,16 +108,10 @@ def distance_matrix(graph):
   return dist_mtx, n
 
 
-## print time costs
-start = default_timer()
-dist_mtx, n = distance_matrix(np.array(data))
-stop = default_timer()
-print('Numpy t1: ', stop - start)
-
 
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
-def hede_distance(matrix, n):
+def hede_distance_np(matrix, n):
   mtx_a_t = np.full((n,n), np.inf)
   mtx_a_t_1 = matrix
 
@@ -146,55 +131,11 @@ def hede_distance(matrix, n):
   return mtx_a_t
 
 
-## print time costs
-start = default_timer()
-mtx_a_t = hede_distance(dist_mtx, n)
-stop = default_timer()
-print('Numpy t2: ', stop - start)
-
-
 
 ##******** Implementation 3: tensorflow ********##
-##**** Construct distance matrix ****##
-
-from timeit import default_timer
-import numpy as np
-
-def distance_matrix(graph):
-  ## calculate number of nodes
-  n = int(np.amax(graph[:,1]))
-
-  ## calculate distance matrix
-  dist_mtx = np.full((n,n), np.inf)
-  for g in graph:
-    i = int(g[0]) - 1
-    j = int(g[1]) - 1
-    d = g[2]
-    dist_mtx[i,j] = d
-    dist_mtx[j,i] = d
-
-  ## set diagonal to 0
-  np.fill_diagonal(dist_mtx, 0)
-
-  dist_mtx = tf.convert_to_tensor(dist_mtx, dtype=tf.float32)
- 
-  return dist_mtx, n
-
-
-## print time costs
-start = default_timer()
-dist_mtx, n = distance_matrix(np.array(data))
-stop = default_timer()
-print('Tensorflow t1: ', stop - start)
-
-
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
-from timeit import default_timer
-import tensorflow as tf
-import numpy as np
-
-def hede_distance(matrix, n):
+def hede_distance_tf(matrix, n):
   mtx_a_t_1 = matrix
 
   p = True
@@ -225,16 +166,58 @@ def hede_distance(matrix, n):
 
   return mtx_a_t
 
-### print time costs (using gpu)
-##start = default_timer()
-##with tf.device('/device:GPU:0'):
-##  mtx_a_t = hede_distance(dist_mtx, n)
-##stop = default_timer()
-##print('Tensorflow t2 using GPU: ', stop - start)
 
-## print time costs (using cpu)
-start = default_timer()
-with tf.device('/cpu:0'):
-  mtx_a_t = hede_distance(dist_mtx, n)
-stop = default_timer()
-print('Tensorflow t2 using CPU: ', stop - start)
+
+##******** Main ********##
+
+with open('hedet_results.txt', 'w') as fw:
+    fw.write('nodes,degree,list_t1,list_t2,np_t1,np_t2,tf_gpu_t2,tf_cpu_t2\n')
+    
+    for i in nodes:
+        for j in degree:
+            data = locals()['data_n' + str(i) + '_d' + str(j)]
+            
+            ## List t1
+            start = default_timer()
+            dist_mtx, n = distance_matrix_list(data)
+            stop = default_timer()
+            list_t1 = stop - start
+
+            ## List t2
+            start = default_timer()
+            mtx_a_t = hede_distance_list(dist_mtx, n)
+            stop = default_timer()
+            list_t2 = stop - start
+
+            ## Numpy t1
+            start = default_timer()
+            dist_mtx, n = distance_matrix_np(np.array(data))
+            stop = default_timer()
+            np_t1 = stop - start
+
+            ## Numpy t2
+            start = default_timer()
+            mtx_a_t = hede_distance_np(dist_mtx, n)
+            stop = default_timer()
+            np_t2 = stop - start
+
+            ## Tensorflow t2 (using gpu)
+            start = default_timer()
+            with tf.device('/device:GPU:0'):
+                mtx_a_t = hede_distance_tf(dist_mtx, n)
+            stop = default_timer()
+            tf_gpu_t2 = stop - start
+
+            ## Tensorflow t2 (using cpu)
+            start = default_timer()
+            with tf.device('/cpu:0'):
+                mtx_a_t = hede_distance_tf(dist_mtx, n)
+            stop = default_timer()
+            tf_cpu_t2 = stop - start
+
+            fw.write(str(i) + ',' + str(j) + ',' + str(list_t1) + ',' + str(list_t2) + ','
+                     + str(np_t1) + ',' + str(np_t2) + ',' + str(tf_gpu_t2) + ',' + str(tf_cpu_t2) + '\n')
+fw.close()
+
+
+
