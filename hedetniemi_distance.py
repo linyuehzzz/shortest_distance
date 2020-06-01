@@ -4,7 +4,9 @@ import networkx as nx
 import numpy as np
 from timeit import default_timer
 
-
+print(tf.version.VERSION)
+print(tf.config.list_physical_devices('GPU'))
+print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
 ##******** Generate graph data ********##
 
@@ -20,7 +22,6 @@ for i in nodes:
         G = nx.random_regular_graph(j, i)
         for (u, v) in G.edges():
             G.edges[u,v]['weight'] = random.uniform(1,100)
-        nx.draw(G)
         nx.write_weighted_edgelist(G, 'graph_n' + str(i) + '_d' + str(j) + '.txt')
 
 for i in nodes:
@@ -202,6 +203,7 @@ with open('hedet_results.txt', 'w') as fw:
             np_t2 = stop - start
 
             ## Tensorflow t2 (using gpu)
+            tf.enable_eager_execution()
             start = default_timer()
             with tf.device('/device:GPU:0'):
                 mtx_a_t = hede_distance_tf(dist_mtx, n)
