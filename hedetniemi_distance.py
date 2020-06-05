@@ -172,7 +172,10 @@ def hede_distance_tf(matrix, n):
 ##******** Main ********##
 
 with open('hedet_results.txt', 'w') as fw:
-    fw.write('nodes,degree,list_t1,list_t2,np_t1,np_t2,tf_gpu_t2,tf_cpu_t2\n')
+##    fw.write('nodes,degree,list_t1,list_t2,np_t1,np_t2,tf_gpu_t2,tf_cpu_t2\n')
+
+    fw.write('nodes,degree,list_t1,list_t2,np_t1,np_t2\n')
+    fw.flush()
     
     for i in nodes:
         for j in degree:
@@ -202,23 +205,26 @@ with open('hedet_results.txt', 'w') as fw:
             stop = default_timer()
             np_t2 = stop - start
 
-            ## Tensorflow t2 (using gpu)
-            tf.enable_eager_execution()
-            start = default_timer()
-            with tf.device('/device:GPU:0'):
-                mtx_a_t = hede_distance_tf(dist_mtx, n)
-            stop = default_timer()
-            tf_gpu_t2 = stop - start
+##            ## Tensorflow t2 (using gpu)
+##            start = default_timer()
+##            with tf.device('/device:GPU:0'):
+##                mtx_a_t = hede_distance_tf(dist_mtx, n)
+##            stop = default_timer()
+##            tf_gpu_t2 = stop - start
+##
+##            ## Tensorflow t2 (using cpu)
+##            start = default_timer()
+##            with tf.device('/cpu:0'):
+##                mtx_a_t = hede_distance_tf(dist_mtx, n)
+##            stop = default_timer()
+##            tf_cpu_t2 = stop - start
 
-            ## Tensorflow t2 (using cpu)
-            start = default_timer()
-            with tf.device('/cpu:0'):
-                mtx_a_t = hede_distance_tf(dist_mtx, n)
-            stop = default_timer()
-            tf_cpu_t2 = stop - start
+##            fw.write(str(i) + ',' + str(j) + ',' + str(list_t1) + ',' + str(list_t2) + ','
+##                     + str(np_t1) + ',' + str(np_t2) + ',' + str(tf_gpu_t2) + ',' + str(tf_cpu_t2) + '\n')
 
             fw.write(str(i) + ',' + str(j) + ',' + str(list_t1) + ',' + str(list_t2) + ','
-                     + str(np_t1) + ',' + str(np_t2) + ',' + str(tf_gpu_t2) + ',' + str(tf_cpu_t2) + '\n')
+                     + str(np_t1) + ',' + str(np_t2) + '\n')
+            fw.flush()
 fw.close()
 
 
