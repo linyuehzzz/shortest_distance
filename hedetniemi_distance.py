@@ -1,12 +1,9 @@
 import random
-import tensorflow as tf
 import networkx as nx
 import numpy as np
+import numba
 from timeit import default_timer
 
-print(tf.version.VERSION)
-print(tf.config.list_physical_devices('GPU'))
-print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
 ##******** Generate graph data ********##
 
@@ -133,48 +130,59 @@ def hede_distance_np(matrix, n):
 
 
 
-##******** Implementation 3: tensorflow ********##
+##******** Implementation 3: numba (njit) ********##
+##**** Construct distance matrix ****##
+
+@numba.njit
+def distance_matrix_nb(graph):
+  ## calculate number of nodes
+  n = int(np.amax(graph[:,1]))
+
+  ## calculate distance matrix
+  dist_mtx = np.full((n,n), np.inf)
+  for g in range(graph.shape[0]):
+    i = int(graph[g][0]) - 1
+    j = int(graph[g][1]) - 1
+    d = graph[g][2]
+    dist_mtx[i,j] = d
+    dist_mtx[j,i] = d
+
+  ## set diagonal to 0
+  np.fill_diagonal(dist_mtx, 0)
+ 
+  return dist_mtx, n
+
+
+
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
-def hede_distance_tf(matrix, n):
+@numba.njit
+def hede_distance_nb(matrix, n):
+  mtx_a_t = np.full((n,n), np.inf)
   mtx_a_t_1 = matrix
 
   p = True
   while p:
-    for i in tf.range(n):
+    for i in range(n):
       a = mtx_a_t_1[i]
-
-      for j in tf.range(n):
+      for j in range(n):
         b = matrix[:,j]
-        c = tf.math.reduce_min(tf.math.add(a, b))
-        c = tf.fill([1], value=c)
-
-        if tf.math.equal(j, 0):
-          r = c
-        else:
-          r = tf.concat([r, c], 0)
-
-      r = tf.expand_dims(r, 0)
-      if tf.math.equal(i, 0):
-        mtx_a_t = r
-      else:
-        mtx_a_t = tf.concat([mtx_a_t, r], 0)
-
-    if tf.reduce_all(tf.math.equal(mtx_a_t_1, mtx_a_t)):
-      p = False
+        mtx_a_t[i,j] = np.amin(np.array([a[k] + b[k] for k in range(n)]))
+    
+    if np.array_equal(mtx_a_t, mtx_a_t_1):
+      p =  False
     else:
-      mtx_a_t_1 = mtx_a_t 
-
+      mtx_a_t_1 = mtx_a_t   
+  
   return mtx_a_t
 
 
 
 ##******** Main ********##
 
-with open('hedet_results.txt', 'w') as fw:
-##    fw.write('nodes,degree,list_t1,list_t2,np_t1,np_t2,tf_gpu_t2,tf_cpu_t2\n')
+with open('hedet_results.csv', 'w') as fw:
+    fw.write('nodes,degree,list_t1,list_t2,np_t1,np_t2,nb_t1,nb_t2\n')
 
-    fw.write('nodes,degree,list_t1,list_t2,np_t1,np_t2\n')
     fw.flush()
     
     for i in nodes:
@@ -204,26 +212,22 @@ with open('hedet_results.txt', 'w') as fw:
             mtx_a_t = hede_distance_np(dist_mtx, n)
             stop = default_timer()
             np_t2 = stop - start
+            
+            ## Numba (njit) t1
+            start = default_timer()
+            dist_mtx, n = distance_matrix_nb(np.array(data))
+            stop = default_timer()
+            nb_t1 = stop - start
 
-##            ## Tensorflow t2 (using gpu)
-##            start = default_timer()
-##            with tf.device('/device:GPU:0'):
-##                mtx_a_t = hede_distance_tf(dist_mtx, n)
-##            stop = default_timer()
-##            tf_gpu_t2 = stop - start
-##
-##            ## Tensorflow t2 (using cpu)
-##            start = default_timer()
-##            with tf.device('/cpu:0'):
-##                mtx_a_t = hede_distance_tf(dist_mtx, n)
-##            stop = default_timer()
-##            tf_cpu_t2 = stop - start
-
-##            fw.write(str(i) + ',' + str(j) + ',' + str(list_t1) + ',' + str(list_t2) + ','
-##                     + str(np_t1) + ',' + str(np_t2) + ',' + str(tf_gpu_t2) + ',' + str(tf_cpu_t2) + '\n')
+            ## Numba (njit) t2
+            start = default_timer()
+            mtx_a_t = hede_distance_nb(dist_mtx, n)
+            stop = default_timer()
+            nb_t2 = stop - start
 
             fw.write(str(i) + ',' + str(j) + ',' + str(list_t1) + ',' + str(list_t2) + ','
-                     + str(np_t1) + ',' + str(np_t2) + '\n')
+                     + str(np_t1) + ',' + str(np_t2) + ',' + str(nb_t1) + ',' + str(nb_t2) + '\n')
+
             fw.flush()
 fw.close()
 
