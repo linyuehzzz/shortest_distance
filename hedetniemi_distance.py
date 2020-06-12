@@ -257,6 +257,3 @@ with open('hedet_results.csv', 'w') as fw:
 
             fw.flush()
 fw.close()
-
-
-
