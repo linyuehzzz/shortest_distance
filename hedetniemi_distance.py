@@ -2,10 +2,11 @@ import random
 import networkx as nx
 import numpy as np
 import numba
+import timeout_decorator
 from timeit import default_timer
 
 
-##******** Generate graph data ********##
+##******** Read graph data ********##
 
 ## Number of nodes (100/1,000/10,000/100,000/1,000,000)
 nodes = [100, 1000, 10000, 100000, 1000000]
@@ -13,13 +14,6 @@ print('Nodes: ', nodes)
 ## Total degree
 degree = [3, 4, 5]
 print('Degree: ', degree)
-
-for i in nodes:
-    for j in degree:
-        G = nx.random_regular_graph(j, i)
-        for (u, v) in G.edges():
-            G.edges[u,v]['weight'] = random.uniform(1,100)
-        nx.write_weighted_edgelist(G, 'graph_n' + str(i) + '_d' + str(j) + '.txt')
 
 for i in nodes:
     for j in degree:        
@@ -38,6 +32,7 @@ for i in nodes:
 ##******** Implementation 1: list ********##
 ##**** Construct distance matrix ****##
 
+@timeout_decorator.timeout(1000)
 def distance_matrix_list(graph):
   ## calculate number of nodes
   n = max([g[1] for g in graph])
@@ -54,7 +49,7 @@ def distance_matrix_list(graph):
 
   ## set diagonal to 0
   for i in range(n):
-    dist_mtx[i][i] = 0
+    dist_mtx[i][i] = 0.0
  
   return dist_mtx, n
 
@@ -62,6 +57,7 @@ def distance_matrix_list(graph):
 
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
+@timeout_decorator.timeout(1000)
 def hede_distance_list(matrix, n):
   INF = float('inf')
   mtx_a_t = [[INF] * n for i in range(n)]
@@ -87,6 +83,7 @@ def hede_distance_list(matrix, n):
 ##******** Implementation 2: numpy ********##
 ##**** Construct distance matrix ****##
 
+@timeout_decorator.timeout(1000)
 def distance_matrix_np(graph):
   ## calculate number of nodes
   n = int(np.amax(graph[:,1]))
@@ -109,6 +106,7 @@ def distance_matrix_np(graph):
 
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
+@timeout_decorator.timeout(1000)
 def hede_distance_np(matrix, n):
   mtx_a_t = np.full((n,n), np.inf)
   mtx_a_t_1 = matrix
@@ -133,6 +131,7 @@ def hede_distance_np(matrix, n):
 ##******** Implementation 3: numba (njit) ********##
 ##**** Construct distance matrix ****##
 
+@timeout_decorator.timeout(1000)
 @numba.njit
 def distance_matrix_nb(graph):
   ## calculate number of nodes
@@ -140,7 +139,7 @@ def distance_matrix_nb(graph):
 
   ## calculate distance matrix
   dist_mtx = np.full((n,n), np.inf)
-  for g in range(graph.shape[0]):
+  for g in numba.prange(graph.shape[0]):
     i = int(graph[g][0]) - 1
     j = int(graph[g][1]) - 1
     d = graph[g][2]
@@ -156,6 +155,7 @@ def distance_matrix_nb(graph):
 
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
+@timeout_decorator.timeout(1000)
 @numba.njit
 def hede_distance_nb(matrix, n):
   mtx_a_t = np.full((n,n), np.inf)
@@ -163,9 +163,9 @@ def hede_distance_nb(matrix, n):
 
   p = True
   while p:
-    for i in range(n):
+    for i in numba.prange(n):
       a = mtx_a_t_1[i]
-      for j in range(n):
+      for j in numba.prange(n):
         b = matrix[:,j]
         mtx_a_t[i,j] = np.amin(np.array([a[k] + b[k] for k in range(n)]))
     
@@ -190,41 +190,68 @@ with open('hedet_results.csv', 'w') as fw:
             data = locals()['data_n' + str(i) + '_d' + str(j)]
             
             ## List t1
-            start = default_timer()
-            dist_mtx, n = distance_matrix_list(data)
-            stop = default_timer()
-            list_t1 = stop - start
-
-            ## List t2
-            start = default_timer()
-            mtx_a_t = hede_distance_list(dist_mtx, n)
-            stop = default_timer()
-            list_t2 = stop - start
-
-            ## Numpy t1
-            start = default_timer()
-            dist_mtx, n = distance_matrix_np(np.array(data))
-            stop = default_timer()
-            np_t1 = stop - start
-
-            ## Numpy t2
-            start = default_timer()
-            mtx_a_t = hede_distance_np(dist_mtx, n)
-            stop = default_timer()
-            np_t2 = stop - start
+            try:
+                start = default_timer()
+                dist_mtx_list, n_list = distance_matrix_list(data)
+                stop = default_timer()
+                list_t1 = stop - start
+            except:
+                list_t1 = float('inf')
             
+            ## List t2
+            try:
+                start = default_timer()
+                mtx_a_t_list = hede_distance_list(dist_mtx_list, n_list)
+                stop = default_timer()
+                list_t2 = stop - start
+                ## print shortest path matrix
+                with open('hedet_mtx_list' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as fw:
+                    fw.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_list]))
+            except:
+                list_t2 = float('inf')
+                
+            ## Numpy t1
+            try:
+                start = default_timer()
+                dist_mtx_np, n_np = distance_matrix_np(np.array(data))
+                stop = default_timer()
+                np_t1 = stop - start
+            except:
+                np_t1 = float('inf')
+                
+            ## Numpy t2
+            try:
+                start = default_timer()
+                mtx_a_t_np = hede_distance_np(dist_mtx_np, n_np)
+                stop = default_timer()
+                np_t2 = stop - start
+                ## print shortest path matrix
+                with open('hedet_mtx_np' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as fw:
+                    fw.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_np.tolist()]))                
+            except:
+                np_t2 = float('inf')
+                
             ## Numba (njit) t1
-            start = default_timer()
-            dist_mtx, n = distance_matrix_nb(np.array(data))
-            stop = default_timer()
-            nb_t1 = stop - start
-
+            try:
+                start = default_timer()
+                dist_mtx_nb, n_nb = distance_matrix_nb(np.array(data))
+                stop = default_timer()
+                nb_t1 = stop - start
+            except:
+                nb_t1 = float('inf')
+            
             ## Numba (njit) t2
-            start = default_timer()
-            mtx_a_t = hede_distance_nb(dist_mtx, n)
-            stop = default_timer()
-            nb_t2 = stop - start
-
+            try:
+                start = default_timer()
+                mtx_a_t_nb = hede_distance_nb(dist_mtx_nb, n_nb)
+                stop = default_timer()
+                nb_t2 = stop - start
+                ## print shortest path matrix
+                with open('hedet_mtx_nb' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as fw:
+                    fw.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
+            except:
+                nb_t2 = float('inf')
+                
             fw.write(str(i) + ',' + str(j) + ',' + str(list_t1) + ',' + str(list_t2) + ','
                      + str(np_t1) + ',' + str(np_t2) + ',' + str(nb_t1) + ',' + str(nb_t2) + '\n')
 
