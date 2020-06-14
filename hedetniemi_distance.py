@@ -32,7 +32,7 @@ for i in nodes:
 ##******** Implementation 1: list ********##
 ##**** Construct distance matrix ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 def distance_matrix_list(graph):
   ## calculate number of nodes
   n = max([g[1] for g in graph])
@@ -57,7 +57,7 @@ def distance_matrix_list(graph):
 
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 def hede_distance_list(matrix, n):
   INF = float('inf')
   mtx_a_t = [[INF] * n for i in range(n)]
@@ -83,7 +83,7 @@ def hede_distance_list(matrix, n):
 ##******** Implementation 2: numpy ********##
 ##**** Construct distance matrix ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 def distance_matrix_np(graph):
   ## calculate number of nodes
   n = int(np.amax(graph[:,1]))
@@ -106,7 +106,7 @@ def distance_matrix_np(graph):
 
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 def hede_distance_np(matrix, n):
   mtx_a_t = np.full((n,n), np.inf)
   mtx_a_t_1 = matrix
@@ -131,7 +131,7 @@ def hede_distance_np(matrix, n):
 ##******** Implementation 3: numba (njit) ********##
 ##**** Construct distance matrix ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 @numba.njit
 def distance_matrix_nb(graph):
   ## calculate number of nodes
@@ -155,7 +155,7 @@ def distance_matrix_nb(graph):
 
 ##**** Calculate Hedetniemi Matrix Sum ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 @numba.njit
 def hede_distance_nb(matrix, n):
   mtx_a_t = np.full((n,n), np.inf)
@@ -205,8 +205,8 @@ with open('hedet_results.csv', 'w') as fw:
                 stop = default_timer()
                 list_t2 = stop - start
                 ## print shortest path matrix
-                with open('hedet_mtx_list' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as fw:
-                    fw.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_list]))
+                with open('hedet_mtx_list' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_list]))
             except:
                 list_t2 = float('inf')
                 
@@ -226,8 +226,8 @@ with open('hedet_results.csv', 'w') as fw:
                 stop = default_timer()
                 np_t2 = stop - start
                 ## print shortest path matrix
-                with open('hedet_mtx_np' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as fw:
-                    fw.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_np.tolist()]))                
+                with open('hedet_mtx_np' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_np.tolist()]))                
             except:
                 np_t2 = float('inf')
                 
@@ -247,8 +247,8 @@ with open('hedet_results.csv', 'w') as fw:
                 stop = default_timer()
                 nb_t2 = stop - start
                 ## print shortest path matrix
-                with open('hedet_mtx_nb' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as fw:
-                    fw.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
+                with open('hedet_mtx_nb' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
             except:
                 nb_t2 = float('inf')
                 

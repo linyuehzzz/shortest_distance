@@ -32,7 +32,7 @@ for i in nodes:
 ##******** Implementation 1: list ********##
 ##**** Construct distance matrix ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 def distance_matrix_list(graph):
   ## calculate number of nodes
   n = max([g[1] for g in graph])
@@ -57,7 +57,7 @@ def distance_matrix_list(graph):
 
 ##**** Calculate Floyd–Warshall distance ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 def floyd_distance_list(matrix, n):
   for k in range(n):
     for i in range(n):
@@ -72,7 +72,7 @@ def floyd_distance_list(matrix, n):
 ##******** Implementation 2: numpy ********##
 ##**** Construct distance matrix ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 def distance_matrix_np(graph):
   ## calculate number of nodes
   n = int(np.amax(graph[:,1]))
@@ -95,7 +95,7 @@ def distance_matrix_np(graph):
 
 ##**** Calculate Floyd–Warshall distance ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 def floyd_distance_np(matrix, n):
   for k in range(n):
     for i in range(n):
@@ -110,7 +110,7 @@ def floyd_distance_np(matrix, n):
 ##******** Implementation 3: numba (njit) ********##
 ##**** Construct distance matrix ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 @numba.njit
 def distance_matrix_nb(graph):
   ## calculate number of nodes
@@ -134,7 +134,7 @@ def distance_matrix_nb(graph):
 
 ##**** Calculate Floyd–Warshall distance ****##
 
-@timeout_decorator.timeout(1000)
+@timeout_decorator.timeout(3600)
 @numba.njit
 def floyd_distance_nb(matrix, n):
   for k in numba.prange(n):
@@ -174,8 +174,8 @@ with open('floyd_results.csv', 'w') as fw:
                 stop = default_timer()
                 list_t2 = stop - start
                 ## print shortest path matrix
-                with open('floyd_dist_list' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as fw:
-                    fw.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_list]))
+                with open('floyd_dist_list' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_list]))
             except:
                 list_t2 = float('inf')
                 
@@ -195,8 +195,8 @@ with open('floyd_results.csv', 'w') as fw:
                 stop = default_timer()
                 np_t2 = stop - start
                 ## print shortest path matrix
-                with open('floyd_dist_np' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as fw:
-                    fw.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_np.tolist()]))                
+                with open('floyd_dist_np' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_np.tolist()]))                
             except:
                 np_t2 = float('inf')
                 
@@ -216,8 +216,8 @@ with open('floyd_results.csv', 'w') as fw:
                 stop = default_timer()
                 nb_t2 = stop - start
                 ## print shortest path matrix
-                with open('floyd_dist_nb' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as fw:
-                    fw.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
+                with open('floyd_dist_nb' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
             except:
                 nb_t2 = float('inf')
                 
@@ -225,4 +225,3 @@ with open('floyd_results.csv', 'w') as fw:
                      + str(np_t1) + ',' + str(np_t2) + ',' + str(nb_t1) + ',' + str(nb_t2) + '\n')
 
             fw.flush()
-fw.close()
