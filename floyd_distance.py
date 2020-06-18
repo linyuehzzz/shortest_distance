@@ -175,7 +175,7 @@ with open('floyd_results.csv', 'w') as fw:
                 list_t2 = stop - start
                 ## print shortest path matrix
                 with open('floyd_dist_list' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
-                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_list]))
+                    f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_list]))
             except:
                 list_t2 = float('inf')
                 
@@ -196,7 +196,7 @@ with open('floyd_results.csv', 'w') as fw:
                 np_t2 = stop - start
                 ## print shortest path matrix
                 with open('floyd_dist_np' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
-                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_np.tolist()]))                
+                    f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_np.tolist()]))                
             except:
                 np_t2 = float('inf')
                 
@@ -217,7 +217,7 @@ with open('floyd_results.csv', 'w') as fw:
                 nb_t2 = stop - start
                 ## print shortest path matrix
                 with open('floyd_dist_nb' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
-                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
+                    f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
             except:
                 nb_t2 = float('inf')
                 

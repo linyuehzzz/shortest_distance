@@ -3,6 +3,7 @@ import networkx as nx
 import numpy as np
 import numba
 import timeout_decorator
+import copy
 from timeit import default_timer
 
 
@@ -61,20 +62,19 @@ def distance_matrix_list(graph):
 def hede_distance_list(matrix, n):
   INF = float('inf')
   mtx_a_t = [[INF] * n for i in range(n)]
-  mtx_a_t_1 = matrix
+  mtx_a_t_1 = copy.deepcopy(matrix)
 
-  p = True
-  while p:
+  for p in range(n):
     for i in range(n):
-      a = mtx_a_t_1[i]
+      a = mtx_a_t_1[i]      
       for j in range(n):
-        b = [row[j] for row in matrix]
+        b = [row[j] for row in matrix] 
         mtx_a_t[i][j] = min([a[k] + b[k] for k in range(n)])
     
     if mtx_a_t == mtx_a_t_1:
-      p =  False
+      break
     else:
-      mtx_a_t_1 = mtx_a_t   
+      mtx_a_t_1 = copy.deepcopy(mtx_a_t)  
   
   return mtx_a_t
 
@@ -109,10 +109,9 @@ def distance_matrix_np(graph):
 @timeout_decorator.timeout(3600)
 def hede_distance_np(matrix, n):
   mtx_a_t = np.full((n,n), np.inf)
-  mtx_a_t_1 = matrix
-
-  p = True
-  while p:
+  mtx_a_t_1 = matrix.copy()
+  
+  for p in range(n):
     for i in range(n):
       a = mtx_a_t_1[i]
       for j in range(n):
@@ -120,9 +119,9 @@ def hede_distance_np(matrix, n):
         mtx_a_t[i,j] = np.amin([a[k] + b[k] for k in range(n)])
     
     if np.array_equal(mtx_a_t, mtx_a_t_1):
-      p =  False
+      break
     else:
-      mtx_a_t_1 = mtx_a_t   
+      mtx_a_t_1 = mtx_a_t.copy()   
   
   return mtx_a_t
 
@@ -159,20 +158,19 @@ def distance_matrix_nb(graph):
 @numba.njit
 def hede_distance_nb(matrix, n):
   mtx_a_t = np.full((n,n), np.inf)
-  mtx_a_t_1 = matrix
-
-  p = True
-  while p:
-    for i in numba.prange(n):
+  mtx_a_t_1 = matrix.copy()
+  
+  for p in range(n):
+    for i in range(n):
       a = mtx_a_t_1[i]
-      for j in numba.prange(n):
+      for j in range(n):
         b = matrix[:,j]
-        mtx_a_t[i,j] = np.amin(np.array([a[k] + b[k] for k in range(n)]))
+        mtx_a_t[i,j] = np.amin([a[k] + b[k] for k in range(n)])
     
     if np.array_equal(mtx_a_t, mtx_a_t_1):
-      p =  False
+      break
     else:
-      mtx_a_t_1 = mtx_a_t   
+      mtx_a_t_1 = mtx_a_t.copy()   
   
   return mtx_a_t
 
@@ -206,7 +204,7 @@ with open('hedet_results.csv', 'w') as fw:
                 list_t2 = stop - start
                 ## print shortest path matrix
                 with open('hedet_mtx_list' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
-                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_list]))
+                    f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_list]))
             except:
                 list_t2 = float('inf')
                 
@@ -227,7 +225,7 @@ with open('hedet_results.csv', 'w') as fw:
                 np_t2 = stop - start
                 ## print shortest path matrix
                 with open('hedet_mtx_np' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
-                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_np.tolist()]))                
+                    f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_np.tolist()]))                
             except:
                 np_t2 = float('inf')
                 
@@ -248,7 +246,7 @@ with open('hedet_results.csv', 'w') as fw:
                 nb_t2 = stop - start
                 ## print shortest path matrix
                 with open('hedet_mtx_nb' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
-                    f.write('\n'.join(['\t'.join([str(cell) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
+                    f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
             except:
                 nb_t2 = float('inf')
                 
