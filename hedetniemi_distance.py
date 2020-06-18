@@ -158,14 +158,14 @@ def distance_matrix_nb(graph):
 @numba.njit
 def hede_distance_nb(matrix, n):
   mtx_a_t = np.full((n,n), np.inf)
-  mtx_a_t_1 = matrix.copy()
+  mtx_a_t_1 = matrix.copy() 
   
-  for p in range(n):
-    for i in range(n):
+  for p in numba.prange(n):
+    for i in numba.prange(n):
       a = mtx_a_t_1[i]
-      for j in range(n):
+      for j in numba.prange(n):
         b = matrix[:,j]
-        mtx_a_t[i,j] = np.amin([a[k] + b[k] for k in range(n)])
+        mtx_a_t[i,j] = np.amin(np.array([a[k] + b[k] for k in range(n)]))
     
     if np.array_equal(mtx_a_t, mtx_a_t_1):
       break
