@@ -33,10 +33,7 @@ for i in nodes:
 ##**** Construct distance matrix ****##
 
 @timeout_decorator.timeout(3600)
-def distance_matrix_list(graph):
-  ## calculate number of nodes
-  n = max([g[1] for g in graph])
-
+def distance_matrix_list(graph, n):
   ## calculate distance matrix
   INF = float('inf')
   dist_mtx = [[INF] * n for i in range(n)]
@@ -51,7 +48,7 @@ def distance_matrix_list(graph):
   for i in range(n):
     dist_mtx[i][i] = 0.0
  
-  return dist_mtx, n
+  return dist_mtx
 
 
 
@@ -73,10 +70,7 @@ def floyd_distance_list(matrix, n):
 ##**** Construct distance matrix ****##
 
 @timeout_decorator.timeout(3600)
-def distance_matrix_np(graph):
-  ## calculate number of nodes
-  n = int(np.amax(graph[:,1]))
-
+def distance_matrix_np(graph, n):
   ## calculate distance matrix
   dist_mtx = np.full((n,n), np.inf)
   for g in graph:
@@ -89,7 +83,7 @@ def distance_matrix_np(graph):
   ## set diagonal to 0
   np.fill_diagonal(dist_mtx, 0)
  
-  return dist_mtx, n
+  return dist_mtx
 
 
 
@@ -112,10 +106,7 @@ def floyd_distance_np(matrix, n):
 
 @timeout_decorator.timeout(3600)
 @numba.njit
-def distance_matrix_nb(graph):
-  ## calculate number of nodes
-  n = int(np.amax(graph[:,1]))
-
+def distance_matrix_nb(graph, n):
   ## calculate distance matrix
   dist_mtx = np.full((n,n), np.inf)
   for g in numba.prange(graph.shape[0]):
@@ -128,7 +119,7 @@ def distance_matrix_nb(graph):
   ## set diagonal to 0
   np.fill_diagonal(dist_mtx, 0)
  
-  return dist_mtx, n
+  return dist_mtx
 
 
 
@@ -161,7 +152,7 @@ with open('floyd_results.csv', 'w') as fw:
             ## List t1
             try:
                 start = default_timer()
-                dist_mtx_list, n_list = distance_matrix_list(data)
+                dist_mtx_list = distance_matrix_list(data, nodes)
                 stop = default_timer()
                 list_t1 = stop - start
             except:
@@ -170,7 +161,7 @@ with open('floyd_results.csv', 'w') as fw:
             ## List t2
             try:
                 start = default_timer()
-                mtx_a_t_list = floyd_distance_list(dist_mtx_list, n_list)
+                mtx_a_t_list = floyd_distance_list(dist_mtx_list, nodes)
                 stop = default_timer()
                 list_t2 = stop - start
                 ## print shortest path matrix
@@ -182,7 +173,7 @@ with open('floyd_results.csv', 'w') as fw:
             ## Numpy t1
             try:
                 start = default_timer()
-                dist_mtx_np, n_np = distance_matrix_np(np.array(data))
+                dist_mtx_np = distance_matrix_np(np.array(data), nodes)
                 stop = default_timer()
                 np_t1 = stop - start
             except:
@@ -191,7 +182,7 @@ with open('floyd_results.csv', 'w') as fw:
             ## Numpy t2
             try:
                 start = default_timer()
-                mtx_a_t_np = floyd_distance_np(dist_mtx_np, n_np)
+                mtx_a_t_np = floyd_distance_np(dist_mtx_np, nodes)
                 stop = default_timer()
                 np_t2 = stop - start
                 ## print shortest path matrix
@@ -203,7 +194,7 @@ with open('floyd_results.csv', 'w') as fw:
             ## Numba (njit) t1
             try:
                 start = default_timer()
-                dist_mtx_nb, n_nb = distance_matrix_nb(np.array(data))
+                dist_mtx_nb = distance_matrix_nb(np.array(data), nodes)
                 stop = default_timer()
                 nb_t1 = stop - start
             except:
@@ -212,7 +203,7 @@ with open('floyd_results.csv', 'w') as fw:
             ## Numba (njit) t2
             try:
                 start = default_timer()
-                mtx_a_t_nb = floyd_distance_nb(dist_mtx_nb, n_nb)
+                mtx_a_t_nb = floyd_distance_nb(dist_mtx_nb, nodes)
                 stop = default_timer()
                 nb_t2 = stop - start
                 ## print shortest path matrix
