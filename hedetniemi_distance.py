@@ -139,9 +139,9 @@ def distance_matrix_nb(graph):
   ## calculate distance matrix
   dist_mtx = np.full((n,n), np.inf)
   for g in numba.prange(graph.shape[0]):
-    i = int(graph[g][0]) - 1
-    j = int(graph[g][1]) - 1
-    d = graph[g][2]
+    i = int(graph[g,0]) - 1
+    j = int(graph[g,1]) - 1
+    d = graph[g,2]
     dist_mtx[i,j] = d
     dist_mtx[j,i] = d
 
