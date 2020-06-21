@@ -10,7 +10,7 @@ from timeit import default_timer
 ##******** Read graph data ********##
 
 ## Number of nodes (100/1,000/10,000/100,000/1,000,000)
-nodes = [100, 1000, 10000]
+nodes = [100, 1000]
 print('Nodes: ', nodes)
 ## Total degree
 degree = [3, 4, 5]
@@ -189,11 +189,11 @@ with open('hedet_results.csv', 'w') as fw:
       ## List t2
       try:
         start = default_timer()
-        mtx_a_t_list = floyd_distance_list(dist_mtx_list, i)
+        mtx_a_t_list = hede_distance_list(dist_mtx_list, i)
         stop = default_timer()
         list_t2 = stop - start
         ## print shortest path matrix
-        with open('floyd_dist_list' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+        with open('hede_dist_list' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
             f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_list]))
       except:
         list_t2 = float('inf')
@@ -210,11 +210,11 @@ with open('hedet_results.csv', 'w') as fw:
       ## Numpy t2
       try:
         start = default_timer()
-        mtx_a_t_np = floyd_distance_np(dist_mtx_np, i)
+        mtx_a_t_np = hede_distance_np(dist_mtx_np, i)
         stop = default_timer()
         np_t2 = stop - start
         ## print shortest path matrix
-        with open('floyd_dist_np' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+        with open('hede_dist_np' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
           f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_np.tolist()]))                
       except:
         np_t2 = float('inf')
@@ -231,11 +231,11 @@ with open('hedet_results.csv', 'w') as fw:
       ## Numba (njit) t2
       try:
         start = default_timer()
-        mtx_a_t_nb = floyd_distance_nb(dist_mtx_nb, i)
+        mtx_a_t_nb = hede_distance_nb(dist_mtx_nb, i)
         stop = default_timer()
         nb_t2 = stop - start
         ## print shortest path matrix
-        with open('floyd_dist_nb' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+        with open('hede_dist_nb' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
           f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_nb.tolist()]))                
       except:
         nb_t2 = float('inf')

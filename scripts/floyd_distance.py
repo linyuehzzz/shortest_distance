@@ -9,7 +9,7 @@ from timeit import default_timer
 ##******** Read graph data ********##
 
 ## Number of nodes (100/1,000/10,000/100,000/1,000,000)
-nodes = [100, 1000, 10000]
+nodes = [100, 1000]
 print('Nodes: ', nodes)
 ## Total degree
 degree = [3, 4, 5]

@@ -2,12 +2,13 @@ from timeit import default_timer
 from numba import cuda, njit, float32
 import numpy as np
 import math
+import timeout_decorator
 
 
 ##******** Read graph data ********##
 
 ## Number of nodes (100/1,000/10,000/100,000/1,000,000)
-nodes = [100, 1000, 10000]
+nodes = [100, 1000]
 print('Nodes: ', nodes)
 ## Total degree
 degree = [3, 4, 5]
@@ -16,19 +17,19 @@ print('Degree: ', degree)
 for i in nodes:
   for j in degree:        
     locals()['data_n' + str(i) + '_d' + str(j)] = []
-      with open('graph_n' + str(i) + '_d' + str(j) + '.txt', 'r') as f:
-        lines = f.read().splitlines()
-          for line in lines:
-            l = line.split()
-            item = [int(l[0]), int(l[1]), float(l[2])]
-            locals()['data_n' + str(i) + '_d' + str(j)].append(item)
+    with open('graph_n' + str(i) + '_d' + str(j) + '.txt', 'r') as f:
+      lines = f.read().splitlines()
+      for line in lines:
+        l = line.split()
+        item = [int(l[0]), int(l[1]), float(l[2])]
+        locals()['data_n' + str(i) + '_d' + str(j)].append(item)
 
 
 
 ##******** Configure CUDA ********##
 
 # number of threads per block: 32、128、256
-NUM_THREADS = [4, 16, 32, 64]
+NUM_THREADS = [4, 16, 32]
 
 def get_cuda_execution_config(n, tpb):
   dimBlock = (tpb, tpb)
@@ -65,6 +66,7 @@ def graph2dist(graph, dist_mtx, n):
     dist_mtx[y,y] = 0.0
 
 
+@timeout_decorator.timeout(3600)
 def distance_matrix(graph, n):
   ## copy data to device
   graph_device = cuda.to_device(graph)
@@ -114,6 +116,7 @@ def cmp_mtx(mtx_a_t_1, mtx_a_t, n, p):
       mtx_a_t_1[x,y] = mtx_a_t[x,y]
 
 
+@timeout_decorator.timeout(3600)
 def hede_distance(matrix, n):
   ## copy data to device
   matrix_device = cuda.to_device(matrix)
@@ -147,6 +150,7 @@ def all_pair_floyd(matrix, k, n):
     matrix[x,y] = min(matrix[x,y], matrix[x,k] + matrix[k,y])
 
 
+@timeout_decorator.timeout(3600)
 def floyd_distance(matrix, n):
   ## copy data to device
   matrix_device = cuda.to_device(matrix)
@@ -192,14 +196,14 @@ with open('all_pair_cuda_results.csv', 'w') as fw:
           cuda_hedet_t2 = stop - start
           ## print shortest path matrix
           with open('hedet_dist_nb_cuda' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
-              f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_hedet.tolist()]))
+            f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_hedet.tolist()]))
         except:
           cuda_hedet_t2 = float('inf')
             
         ## floyd distance
         try:
           start = default_timer()
-          mtx_a_t_np = floyd_distance_np(dist_mtx_np, i)
+          mtx_a_t_floyd = floyd_distance(dist_mtx, i)
           stop = default_timer()
           cuda_floyd_t2 = stop - start
           ## print shortest path matrix
