@@ -151,7 +151,7 @@ def hede_distance_nb(matrix, n):
   mtx_a_t = np.full((n,n), np.inf)
   mtx_a_t_1 = matrix.copy() 
   
-  for p in numba.prange(n):
+  for p in range(n):
     for i in numba.prange(n):
       a = mtx_a_t_1[i]
       for j in numba.prange(n):

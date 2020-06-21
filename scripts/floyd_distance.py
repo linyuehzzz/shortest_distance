@@ -128,7 +128,7 @@ def distance_matrix_nb(graph, n):
 @timeout_decorator.timeout(3600)
 @numba.njit
 def floyd_distance_nb(matrix, n):
-  for k in numba.prange(n):
+  for k in range(n):
     for i in numba.prange(n):
       for j in numba.prange(n):
         if matrix[i,j] > matrix[i,k] + matrix[k,j]:

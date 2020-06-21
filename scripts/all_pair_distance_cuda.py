@@ -169,7 +169,7 @@ def floyd_distance(matrix, n):
 ##******** Main ********##
 
 with open('all_pair_cuda_results.csv', 'w') as fw:
-  fw.write('bpg,tpb,nodes,degree,t1,hedet_t2,floyd_t2,\n')
+  fw.write('bpg,tpb,nodes,degree,t1,hedet_t2,floyd_t2\n')
   fw.flush()
 
   for k in NUM_THREADS:
