@@ -8,7 +8,7 @@ import timeout_decorator
 ##******** Read graph data ********##
 
 ## Number of nodes (100/1,000/10,000/100,000/1,000,000)
-nodes = [100, 1000]
+nodes = [100, 1000, 10000, 100000, 1000000]
 print('Nodes: ', nodes)
 ## Total degree
 degree = [3, 4, 5]
@@ -28,8 +28,8 @@ for i in nodes:
 
 ##******** Configure CUDA ********##
 
-# number of threads per block: 32、128、256
-NUM_THREADS = [4, 16, 32]
+# number of threads per block: 4*4, 8*8, 16*16, 32*32
+NUM_THREADS = [4, 8, 16, 32]
 
 def get_cuda_execution_config(n, tpb):
   dimBlock = (tpb, tpb)
@@ -47,12 +47,10 @@ def graph2dist(graph, dist_mtx, n):
 
   ## initialize distance matrix
   x, y = cuda.grid(2)
-  for i in range(x, n, stride):
-    for j in range(y, n, stride):
-      dist_mtx[i,j] = np.inf
+  if x < n and y < n:
+    dist_mtx[x,y] = np.inf
 
   ## calculate distance matrix
-  x = cuda.grid(1)
   for i in range(x, graph.shape[0], stride):
     a = int(graph[i,0]) - 1
     b = int(graph[i,1]) - 1
@@ -61,12 +59,11 @@ def graph2dist(graph, dist_mtx, n):
     dist_mtx[b,a] = d
   
   ## set diagonal to 0
-  y = cuda.grid(1)
-  if y < n:
-    dist_mtx[y,y] = 0.0
+  if x < n:
+    dist_mtx[x,x] = 0.0
 
 
-@timeout_decorator.timeout(3600)
+@timeout_decorator.timeout(10800)
 def distance_matrix(graph, n):
   ## copy data to device
   graph_device = cuda.to_device(graph)
@@ -94,7 +91,7 @@ def init_mtx(matrix, mtx_a_t_1, mtx_a_t, n):
 
 
 @cuda.jit
-def all_pair_hedet(matrix, mtx_a_t_1, mtx_a_t, n):
+def all_pair_hedet(matrix, mtx_a_t_1, mtx_a_t, n, p):
   x, y = cuda.grid(2)
   if x < n and y < n:
     summ = np.inf
@@ -102,21 +99,12 @@ def all_pair_hedet(matrix, mtx_a_t_1, mtx_a_t, n):
       summ = min(summ, mtx_a_t_1[x, k] + matrix[k, y])
     mtx_a_t[x,y] = summ
 
-
-@cuda.jit
-def cmp_mtx(mtx_a_t_1, mtx_a_t, n, p):
-  x, y = cuda.grid(2)
-  if x < n and y < n and p == True:
-    if mtx_a_t_1[x,y] != mtx_a_t[x,y]:
-      p = False
-  
-  if p == False:
-    x, y = cuda.grid(2)
-    if x < n and y < n:
+    if mtx_a_t_1[x,y] != mtx_a_t[x,y]:    
       mtx_a_t_1[x,y] = mtx_a_t[x,y]
+      p[0] = False
 
 
-@timeout_decorator.timeout(3600)
+@timeout_decorator.timeout(10800)
 def hede_distance(matrix, n):
   ## copy data to device
   matrix_device = cuda.to_device(matrix)
@@ -127,11 +115,10 @@ def hede_distance(matrix, n):
   init_mtx[dimGrid, dimBlock](matrix_device, mtx_a_t_1_device, mtx_a_t_device, n)
 
   ## calculate hedetniemi distance
-  p = False
   for k in range(n):
-    all_pair_hedet[dimGrid, dimBlock](matrix_device, mtx_a_t_1_device, mtx_a_t_device, n)
-    cmp_mtx[dimGrid, dimBlock](mtx_a_t_1_device, mtx_a_t_device, n, p)
-    if p == True:
+    p = cuda.to_device([True])
+    all_pair_hedet[dimGrid, dimBlock](matrix_device, mtx_a_t_1_device, mtx_a_t_device, n, p)
+    if p[0] == True:
       break
   
   ## copy data to host
@@ -150,7 +137,7 @@ def all_pair_floyd(matrix, k, n):
     matrix[x,y] = min(matrix[x,y], matrix[x,k] + matrix[k,y])
 
 
-@timeout_decorator.timeout(3600)
+@timeout_decorator.timeout(10800)
 def floyd_distance(matrix, n):
   ## copy data to device
   matrix_device = cuda.to_device(matrix)
@@ -174,9 +161,9 @@ with open('all_pair_cuda_results.csv', 'w') as fw:
 
   for k in NUM_THREADS:
     for i in nodes:
+      dimGrid, dimBlock = get_cuda_execution_config(i, k)
+      
       for j in degree:
-        dimGrid, dimBlock = get_cuda_execution_config(i, k)
-
         data = locals()['data_n' + str(i) + '_d' + str(j)]
         
         ## distance matrix
