@@ -173,7 +173,7 @@ with open('hedet_results_nb_cuda.csv', 'w') as fw:
           stop = default_timer()
           cuda_hedet_t2 = stop - start
           ## print shortest path matrix
-          with open('hedet_dist_nb_cuda' + '_n' + str(i) + '_d' + str(j) + '.txt', 'w') as f:
+          with open('hedet_dist_nb_cuda' + '_n' + str(i) + '_d' + str(j) + '_tpb' + str(k) + '.txt', 'w') as f:
             f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_hedet.tolist()]))
         except:
           cuda_hedet_t2 = float('inf')
