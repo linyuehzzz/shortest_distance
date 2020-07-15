@@ -82,25 +82,15 @@ def distance_matrix(graph, n):
 ##**** Hedetniemi distance ****##
 
 @cuda.jit
-def init_mtx(matrix, mtx_a_t_1, mtx_a_t, n):
-  # initialize distance matrix
-  x, y = cuda.grid(2)
-  if x < n and y < n:
-    mtx_a_t[x,y] = np.inf
-    mtx_a_t_1[x,y] = matrix[x,y]
-
-
-@cuda.jit
-def all_pair_hedet(matrix, mtx_a_t_1, mtx_a_t, n, p):
+def all_pair_hedet(matrix, mtx_a_t, n, p):
   x, y = cuda.grid(2)
   if x < n and y < n:
     summ = np.inf
     for k in range(n):
-      summ = min(summ, mtx_a_t_1[x, k] + matrix[k, y])
-    mtx_a_t[x,y] = summ
+      summ = min(summ, mtx_a_t[x,k] + matrix[k,y])
 
-    if mtx_a_t_1[x,y] != mtx_a_t[x,y]:    
-      mtx_a_t_1[x,y] = mtx_a_t[x,y]
+    if summ != mtx_a_t[x,y]:
+      mtx_a_t[x,y] = summ
       p[0] = False
 
 
@@ -108,16 +98,12 @@ def all_pair_hedet(matrix, mtx_a_t_1, mtx_a_t, n, p):
 def hede_distance(matrix, n):
   ## copy data to device
   matrix_device = cuda.to_device(matrix)
-  mtx_a_t_1_device = cuda.device_array(shape=(n,n))
-  mtx_a_t_device = cuda.device_array(shape=(n,n))
-
-  ## initialize hedetniemi distance
-  init_mtx[dimGrid, dimBlock](matrix_device, mtx_a_t_1_device, mtx_a_t_device, n)
+  mtx_a_t_device = cuda.to_device(matrix)
 
   ## calculate hedetniemi distance
   for k in range(n):
     p = cuda.to_device([True])
-    all_pair_hedet[dimGrid, dimBlock](matrix_device, mtx_a_t_1_device, mtx_a_t_device, n, p)
+    all_pair_hedet[dimGrid, dimBlock](matrix_device, mtx_a_t_device, n, p)
     if p[0] == True:
       break
   

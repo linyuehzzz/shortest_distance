@@ -29,7 +29,7 @@ for i in nodes:
 ##******** Configure CUDA ********##
 
 # number of threads per block: 4*4, 8*8, 16*16, 32*32
-NUM_THREADS = [4, 8, 16, 32]
+NUM_THREADS = 4
 
 def get_cuda_execution_config(n, tpb):
   dimBlock = (tpb, tpb)
@@ -82,30 +82,11 @@ def distance_matrix(graph, n):
 ##**** Hedetniemi distance ****##
 
 @cuda.jit
-def init_mtx(matrix, mtx_a_t_1, mtx_a_t, n):
-  # initialize distance matrix
-  x, y = cuda.grid(2)
-  if x < n and y < n:
-    mtx_a_t[x,y] = np.inf
-    mtx_a_t_1[x,y] = matrix[x,y]
-
-
-@cuda.jit
-def all_pair_hedet(matrix, mtx_a_t_1, mtx_a_t, n, p):
+def all_pair_hedet(matrix, mtx_a_t, n, p):
   # define an array in the shared memory
-  if dimBlock[0] == 4:
-    s_a = cuda.shared.array(shape=(4, 4), dtype=float32)
-    s_b = cuda.shared.array(shape=(4, 4), dtype=float32)
-  elif dimBlock[0] == 8:
-    s_a = cuda.shared.array(shape=(8, 8), dtype=float32)
-    s_b = cuda.shared.array(shape=(8, 8), dtype=float32)
-  elif dimBlock[0] == 16:
-    s_a = cuda.shared.array(shape=(16, 16), dtype=float32)
-    s_b = cuda.shared.array(shape=(16, 16), dtype=float32)
-  elif dimBlock[0] == 32:
-    s_a = cuda.shared.array(shape=(32, 32), dtype=float32)
-    s_b = cuda.shared.array(shape=(32, 32), dtype=float32)
-  
+  s_a = cuda.shared.array(shape=(NUM_THREADS, NUM_THREADS), dtype=float32)
+  s_b = cuda.shared.array(shape=(NUM_THREADS, NUM_THREADS), dtype=float32)
+
   x, y = cuda.grid(2)
 
   tx = cuda.threadIdx.x
@@ -121,17 +102,16 @@ def all_pair_hedet(matrix, mtx_a_t_1, mtx_a_t, n, p):
   summ = np.inf
   for i in range(bpg):
     # preload data into shared memory
-    s_a[tx, ty] = mtx_a_t_1[x, ty + i * tpb]
+    s_a[tx, ty] = mtx_a_t[x, ty + i * tpb]
     s_b[tx, ty] = matrix[tx + i * tpb, y]
     cuda.syncthreads()
     for j in range(tpb):
       summ = min(summ, s_a[tx, j] + s_b[j, ty])
     cuda.syncthreads()
-  mtx_a_t[x,y] = summ
 
   # compare matrix t and matrix t-1
-  if mtx_a_t_1[x,y] != mtx_a_t[x,y]:
-    mtx_a_t_1[x,y] = mtx_a_t[x,y]
+  if summ != mtx_a_t[x,y]:
+    mtx_a_t[x,y] = summ
     p[0] = False
 
 
@@ -139,17 +119,14 @@ def all_pair_hedet(matrix, mtx_a_t_1, mtx_a_t, n, p):
 def hede_distance(matrix, n):
   ## copy data to device
   matrix_device = cuda.to_device(matrix)
-  mtx_a_t_1_device = cuda.device_array(shape=(n,n))
-  mtx_a_t_device = cuda.device_array(shape=(n,n))
-
-  ## initialize hedetniemi distance
-  init_mtx[dimGrid, dimBlock](matrix_device, mtx_a_t_1_device, mtx_a_t_device, n)
+  mtx_a_t_device = cuda.to_device(matrix)
 
   ## calculate hedetniemi distance
   for k in range(n):
     p = cuda.to_device([True])
-    all_pair_hedet[dimGrid, dimBlock](matrix_device, mtx_a_t_1_device, mtx_a_t_device, n, p)
+    all_pair_hedet[dimGrid, dimBlock](matrix_device, mtx_a_t_device, n, p)
     if p[0] == True:
+      print(k)
       break
   
   ## copy data to host
@@ -175,40 +152,39 @@ mtx_a_t = hede_distance(dist_mtx, n)
 
 ##******** Main ********##
 
-with open('hedet_results_nb_cuda_sm.csv', 'w') as fw:
+with open('hedet_results_nb_cuda_sm' + str(NUM_THREADS) + '.csv', 'w') as fw:
   fw.write('bpg,tpb,nodes,degree,nb_cuda_sm_t1,nb_cuda_sm_t2\n')
   fw.flush()
 
-  for k in NUM_THREADS:
-    for i in nodes:
-      dimGrid, dimBlock = get_cuda_execution_config(i, k)
-      if dimGrid[0] > 65535 or i % k != 0:
-        continue
+  for i in nodes:
+    dimGrid, dimBlock = get_cuda_execution_config(i, NUM_THREADS)
+    if dimGrid[0] > 65535 or i % NUM_THREADS != 0:
+      continue
       
-      for j in degree:
-        data = locals()['data_n' + str(i) + '_d' + str(j)]
+    for j in degree:
+      data = locals()['data_n' + str(i) + '_d' + str(j)]
         
-        ## distance matrix
-        try:
-          start = default_timer()
-          dist_mtx = distance_matrix(np.array(data), i)
-          stop = default_timer()
-          cuda_t1 = stop - start
-        except:
-          cuda_t1 = float('inf')
+      ## distance matrix
+      try:
+        start = default_timer()
+        dist_mtx = distance_matrix(np.array(data), i)
+        stop = default_timer()
+        cuda_t1 = stop - start
+      except:
+        cuda_t1 = float('inf')
         
-        ## hedetniemi distance
-        try:
-          start = default_timer()
-          mtx_a_t_hedet = hede_distance(dist_mtx, i)
-          stop = default_timer()
-          cuda_hedet_t2 = stop - start
-          ## print shortest path matrix
-          with open('hedet_dist_nb_cuda_sm' + '_n' + str(i) + '_d' + str(j) + '_tpb' + str(k) + '.txt', 'w') as f:
-            f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_hedet.tolist()]))
-        except:
-          cuda_hedet_t2 = float('inf')
+      ## hedetniemi distance
+      try:
+        start = default_timer()
+        mtx_a_t_hedet = hede_distance(dist_mtx, i)
+        stop = default_timer()
+        cuda_hedet_t2 = stop - start
+        ## print shortest path matrix
+        with open('hedet_dist_nb_cuda_sm' + '_n' + str(i) + '_d' + str(j) + '_tpb' + str(NUM_THREADS) + '.txt', 'w') as f:
+          f.write('\n'.join(['\t'.join([str(round(cell,2)) for cell in row]) for row in mtx_a_t_hedet.tolist()]))
+      except:
+        cuda_hedet_t2 = float('inf')
             
-        fw.write(str(dimGrid) + ',' + str(dimBlock) + ',' + str(i) + ',' + str(j) + ',' + str(cuda_t1) + ',' + str(cuda_hedet_t2) + '\n')
+      fw.write(str(dimGrid) + ',' + str(dimBlock) + ',' + str(i) + ',' + str(j) + ',' + str(cuda_t1) + ',' + str(cuda_hedet_t2) + '\n')
 
-        fw.flush()
+      fw.flush()
